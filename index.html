@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculadora Securitizadora — Vedrà</title>
+<style>
+  :root{
+    --white-gray:#EEEEEE;
+    --prussian:#003153;
+    --oil-yellow:#C5A447;
+    --cream:#F7F4EE;
+    --titanium:#F4F4F6;
+    --ink:#1c2733;
+    --muted:#5c6b78;
+    --line:#e2ddd2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--white-gray);
+    color:var(--ink);
+    font-family:Georgia, 'Times New Roman', serif;
+    font-size:11pt;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.brand-name,.card-value,.result-value,label,button,th{
+    font-family:Helvetica, Arial, sans-serif;
+  }
+  /* Header */
+  header{
+    background:var(--prussian);
+    color:#fff;
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
+  .logo{
+    width:44px;height:44px;flex:0 0 44px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .logo svg{width:100%;height:100%;}
+  .brand-name{font-size:18px;font-weight:700;letter-spacing:.5px;}
+  .brand-sub{font-size:11px;color:var(--oil-yellow);letter-spacing:2px;text-transform:uppercase;font-family:Helvetica,Arial,sans-serif;}
+  /* Layout */
+  .wrap{max-width:1080px;margin:24px auto;padding:0 20px 60px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px 24px;
+    box-shadow:0 1px 2px rgba(0,49,83,.04);
+  }
+  .card.cream{background:var(--cream);}
+  h2{
+    font-size:15px;margin:0 0 16px;color:var(--prussian);
+    text-transform:uppercase;letter-spacing:1px;
+    border-bottom:2px solid var(--oil-yellow);
+    padding-bottom:8px;display:inline-block;
+  }
+  .field{margin-bottom:15px;}
+  label{display:block;font-size:11px;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+  .input-row{position:relative;display:flex;align-items:center;}
+  .input-row .prefix,.input-row .suffix{
+    position:absolute;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:var(--muted);
+  }
+  .input-row .prefix{left:12px;}
+  .input-row .suffix{right:12px;}
+  input[type=text]{
+    width:100%;padding:10px 12px;font-size:13px;font-family:Helvetica,Arial,sans-serif;
+    border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);
+  }
+  input.has-prefix{padding-left:32px;}
+  input.has-suffix{padding-right:32px;}
+  input[type=text]:focus{outline:none;border-color:var(--prussian);box-shadow:0 0 0 2px rgba(0,49,83,.12);}
+  input[type=range]{width:100%;accent-color:var(--prussian);margin-top:6px;}
+  .range-val{font-family:Helvetica,Arial,sans-serif;font-size:12px;color:var(--prussian);font-weight:700;}
+  /* Results */
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+  td.val{text-align:right;font-family:Helvetica,Arial,sans-serif;white-space:nowrap;}
+  tr.total td{font-weight:700;color:var(--prussian);border-top:2px solid var(--prussian);border-bottom:none;}
+  tr.sub td{color:var(--muted);}
+  tr.neg td.val{color:#9a2a2a;}
+  .cards-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
+  @media(max-width:860px){.cards-row{grid-template-columns:1fr;}}
+  .metric{
+    background:var(--prussian);color:#fff;border-radius:10px;padding:16px 18px;
+  }
+  .metric .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--oil-yellow);font-family:Helvetica,Arial,sans-serif;}
+  .metric .card-value{font-size:20px;font-weight:700;margin-top:4px;}
+  .highlight{background:var(--oil-yellow);color:var(--prussian);}
+  .highlight .lbl{color:var(--prussian);}
+  .note{font-size:10.5px;color:var(--muted);margin-top:18px;line-height:1.6;font-family:Helvetica,Arial,sans-serif;}
+  footer{text-align:center;font-size:10px;color:var(--muted);padding:20px;font-family:Helvetica,Arial,sans-serif;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true">
+    <!-- Placeholder do símbolo Vedrà (substituível por vedra-logo-simbolo.png) -->
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="30" fill="none" stroke="#C5A447" stroke-width="2.5"/>
+      <path d="M18 20 L32 46 L46 20" fill="none" stroke="#F4F4F6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div>
+    <div class="brand-name">Vedrà Securitizadora</div>
+    <div class="brand-sub">Calculadora de Resultado Trimestral · Lucro Real</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <!-- ENTRADAS -->
+    <section class="card">
+      <h2>Parâmetros da Operação</h2>
+
+      <div class="field">
+        <label for="ativos">Ativos disponíveis (volume trimestral)</label>
+        <div class="input-row">
+          <span class="prefix">R$</span>
+          <input type="text" id="ativos" class="has-prefix" inputmode="decimal" value="30.000.000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="desagio">% Deságio (margem sobre os ativos)</label>
+        <div class="input-row">
+          <input type="text" id="desagio" class="has-suffix" inputmode="decimal" value="3,5" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="remun">% Remuneração das debêntures (no trimestre)</label>
+        <div class="input-row">
+          <input type="text" id="remun" class="has-suffix" inputmode="decimal" value="3,0" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="opex">OPEX (despesas operacionais no trimestre)</label>
+        <div class="input-row">
+          <span class="prefix">R$</span>
+          <input type="text" id="opex" class="has-prefix" inputmode="decimal" value="120.000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="nf">Nota fiscal (serviços tomados no trimestre)</label>
+        <div class="input-row">
+          <span class="prefix">R$</span>
+          <input type="text" id="nf" class="has-prefix" inputmode="decimal" value="80.000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="prejuizo">Prejuízo fiscal acumulado (disponível)</label>
+        <div class="input-row">
+          <span class="prefix">R$</span>
+          <input type="text" id="prejuizo" class="has-prefix" inputmode="decimal" value="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="prazo">Prazo médio dos recebíveis: <span id="prazoOut" class="range-val">6 meses</span></label>
+        <input type="range" id="prazo" min="1" max="36" step="1" value="6" />
+      </div>
+    </section>
+
+    <!-- RESULTADOS -->
+    <section class="card cream">
+      <h2>Demonstração de Resultado (Trimestre)</h2>
+      <table>
+        <tbody>
+          <tr><td>Receita Bruta</td><td class="val" id="r_receita">—</td></tr>
+          <tr class="sub"><td>(−) PIS/Cofins (líquido: débito − crédito)</td><td class="val" id="r_pc">—</td></tr>
+          <tr class="sub"><td>(−) OPEX</td><td class="val" id="r_opex">—</td></tr>
+          <tr class="sub"><td>(−) Nota fiscal</td><td class="val" id="r_nf">—</td></tr>
+          <tr class="sub"><td>(−) Remuneração debêntures</td><td class="val" id="r_remun">—</td></tr>
+          <tr class="total"><td>Resultado Operacional</td><td class="val" id="r_oper">—</td></tr>
+          <tr class="sub"><td>Compensação de prejuízo (até 30%)</td><td class="val" id="r_comp">—</td></tr>
+          <tr class="sub"><td>Base de cálculo IRPJ/CSLL</td><td class="val" id="r_base">—</td></tr>
+          <tr class="sub"><td>(−) IRPJ (15% + adicional 10%)</td><td class="val" id="r_irpj">—</td></tr>
+          <tr class="sub"><td>(−) CSLL (9%)</td><td class="val" id="r_csll">—</td></tr>
+          <tr class="total"><td>Lucro Líquido</td><td class="val" id="r_lucro">—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="cards-row">
+        <div class="metric">
+          <div class="lbl">Volume operado / mês</div>
+          <div class="card-value" id="c_volume">—</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">Aporte de debenturistas</div>
+          <div class="card-value" id="c_aporte">—</div>
+        </div>
+        <div class="metric highlight">
+          <div class="lbl">Carga tributária total</div>
+          <div class="card-value" id="c_carga">—</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">Carga tributária (% s/ receita)</div>
+          <div class="card-value" id="c_cargapct">—</div>
+        </div>
+      </div>
+
+      <p class="note">
+        Premissas: Receita Bruta = Ativos × Deságio. PIS/Cofins não-cumulativo (1,65% + 7,6% = 9,25%) sobre a receita,
+        com crédito de 9,25% sobre OPEX e NF. IRPJ 15% + adicional de 10% sobre a base que exceder R$ 60.000/trimestre;
+        CSLL 9%. Compensação de prejuízo fiscal limitada a 30% do resultado. Aporte de debenturistas = Ativos × (1 − Deságio).
+        Volume operado/mês = Ativos ÷ prazo médio (giro da carteira). Ajuste os parâmetros conforme a modelagem oficial da Vedrà.
+      </p>
+    </section>
+  </div>
+</div>
+
+<footer>Vedrà Securitizadora · Ferramenta interna de estimativa — resultados não substituem apuração contábil.</footer>
+
+<script>
+  const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});
+  const PCT = new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Converte string digitada (pt-BR: pontos de milhar, vírgula decimal) em número
+  function num(v){
+    if(v==null) return 0;
+    let s = String(v).trim();
+    if(!s) return 0;
+    s = s.replace(/\./g,'').replace(/,/g,'.').replace(/[^0-9.\-]/g,'');
+    const n = parseFloat(s);
+    return isNaN(n)?0:n;
+  }
+
+  const els = {
+    ativos:document.getElementById('ativos'),
+    desagio:document.getElementById('desagio'),
+    remun:document.getElementById('remun'),
+    opex:document.getElementById('opex'),
+    nf:document.getElementById('nf'),
+    prejuizo:document.getElementById('prejuizo'),
+    prazo:document.getElementById('prazo'),
+    prazoOut:document.getElementById('prazoOut'),
+  };
+
+  function calc(){
+    const ativos   = num(els.ativos.value);
+    const desagio  = num(els.desagio.value)/100;
+    const remunPct = num(els.remun.value)/100;
+    const opex     = num(els.opex.value);
+    const nf        = num(els.nf.value);
+    const prejuizo = num(els.prejuizo.value);
+    const prazo    = parseInt(els.prazo.value,10);
+
+    const aporte = ativos * (1 - desagio);          // recursos captados via debêntures
+    const receita = ativos * desagio;                // receita bruta (deságio)
+    const remun = aporte * remunPct;                 // remuneração paga aos debenturistas
+
+    // PIS/Cofins não-cumulativo
+    const aliqPC = 0.0925;
+    const debitoPC = receita * aliqPC;
+    const creditoPC = (opex + nf) * aliqPC;
+    const pisCofins = Math.max(debitoPC - creditoPC, 0);
+
+    const resultadoOper = receita - pisCofins - opex - nf - remun;
+
+    // Compensação de prejuízo: até 30% do resultado positivo
+    let comp = 0;
+    if(resultadoOper > 0){
+      comp = Math.min(resultadoOper * 0.30, prejuizo);
+    }
+    const base = Math.max(resultadoOper - comp, 0);
+
+    // IRPJ 15% + adicional 10% sobre o que exceder 60.000/trimestre
+    const irpj = base * 0.15 + Math.max(base - 60000, 0) * 0.10;
+    const csll = base * 0.09;
+
+    const lucro = resultadoOper - irpj - csll;
+    const carga = pisCofins + irpj + csll;
+    const cargaPct = receita > 0 ? (carga/receita*100) : 0;
+    const volumeMes = prazo > 0 ? ativos / prazo : ativos / 3; // giro da carteira pelo prazo médio
+
+    const set=(id,v)=>document.getElementById(id).textContent=v;
+    const neg=(id,cond)=>document.getElementById(id).closest('tr').classList.toggle('neg',cond);
+
+    set('r_receita', BRL.format(receita));
+    set('r_pc', '− '+BRL.format(pisCofins));
+    set('r_opex', '− '+BRL.format(opex));
+    set('r_nf', '− '+BRL.format(nf));
+    set('r_remun', '− '+BRL.format(remun));
+    set('r_oper', BRL.format(resultadoOper));
+    set('r_comp', '− '+BRL.format(comp));
+    set('r_base', BRL.format(base));
+    set('r_irpj', '− '+BRL.format(irpj));
+    set('r_csll', '− '+BRL.format(csll));
+    set('r_lucro', BRL.format(lucro));
+    neg('r_oper', resultadoOper<0);
+    neg('r_lucro', lucro<0);
+
+    set('c_volume', BRL.format(volumeMes));
+    set('c_aporte', BRL.format(aporte));
+    set('c_carga', BRL.format(carga));
+    set('c_cargapct', PCT.format(cargaPct)+'%');
+  }
+
+  // Slider label
+  els.prazo.addEventListener('input',()=>{
+    els.prazoOut.textContent = els.prazo.value + (els.prazo.value==='1'?' mês':' meses');
+    calc();
+  });
+
+  // Recalcula a cada digitação (campos aceitam texto livre)
+  ['ativos','desagio','remun','opex','nf','prejuizo'].forEach(id=>{
+    els[id].addEventListener('input',calc);
+  });
+
+  calc();
+</script>
+</body>
+</html>
