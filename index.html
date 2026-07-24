@@ -209,6 +209,10 @@
   </div>
 
   <p style="font-size:12px;color:var(--text-muted);margin:14px 0 0">Giro por trimestre = 90 ÷ prazo médio.</p>
+
+  <button id="export-xlsx" style="margin-top:20px;width:100%;padding:13px;border:none;border-radius:12px;background:var(--bg-accent);color:#f3e9d0;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <span style="color:#d8c48f;">⬇</span> Exportar para Excel
+  </button>
 </div>
 </div>
 
@@ -218,6 +222,7 @@
   <footer>Vedrà Securitizadora · Ferramenta interna de estimativa — resultados não substituem apuração contábil.</footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 function fmt(v){return 'R$ ' + Math.round(v).toLocaleString('pt-BR');}
 function fmtPct(v){return Math.round(v*10)/10 + '%';}
@@ -350,6 +355,82 @@ document.getElementById('volume-num').addEventListener('input', ()=>{ document.g
 ['rate','term','cost-vedra','cost-kuara'].forEach(id=>{
   document.getElementById(id).addEventListener('input', compute);
 });
+
+function exportXlsx(){
+  if(typeof XLSX === 'undefined'){ alert('A ferramenta de exportação ainda está carregando. Tente novamente em alguns segundos.'); return; }
+  const ratePct = parseFloat(document.getElementById('rate').value);
+  const term = parseFloat(document.getElementById('term').value);
+  const costVedra = parseFloat(document.getElementById('cost-vedra').value);
+  const costKuara = parseFloat(document.getElementById('cost-kuara').value);
+  const volumeOp = parseFloat(document.getElementById('volume-input').value)||0;
+  const rEff = (ratePct/100) * (term/30);
+  const giro = term > 0 ? 90/term : 0;
+  const vV = findBreakeven(rEff, costVedra, true, 50000000);
+  const vK = findBreakeven(rEff, costKuara, false, 50000000);
+  const bV = breakdown(vV, rEff), bK = breakdown(vK, rEff), bO = breakdown(volumeOp, rEff);
+  const r = x => Math.round(x);
+
+  const aoa = [
+    ['Calculadora de Meta & Giro Trimestral — Vedrà'],
+    ['Gerado em', new Date().toLocaleString('pt-BR')],
+    [],
+    ['PARÂMETROS'],
+    ['Taxa ao mês (%)', ratePct],
+    ['Prazo médio (dias)', term],
+    ['Giro por trimestre', Number(giro.toFixed(2))],
+    [],
+    ['META VEDRÀ'],
+    ['Meta mensal Vedrà (R$)', r(costVedra)],
+    ['Volume mensal originado (R$)', r(vV)],
+    ['Deságio (R$)', r(bV.desagio)],
+    ['(-) Taxa fixa investidor (R$)', r(bV.txFixa)],
+    ['(-) PIS + Cofins (R$)', r(bV.pis + bV.cofins)],
+    ['1º resultado (R$)', r(bV.res1)],
+    ['(-) IRPJ + CSLL (R$)', r(bV.irpj + bV.csll)],
+    ['Taxa de serviço — receita Vedrà (R$)', r(bV.txServ)],
+    ['Performance 25% pós-imposto (R$)', r(bV.performance)],
+    ['Resultado Vedrà / mês (R$)', r(bV.vedraBruta)],
+    ['Capital em giro necessário (R$)', r(vV * (term/30))],
+    [],
+    ['META INVESTIDOR (KUARÁ)'],
+    ['Meta mensal Investidor (R$)', r(costKuara)],
+    ['Volume mensal originado (R$)', r(vK)],
+    ['Deságio (R$)', r(bK.desagio)],
+    ['(-) Taxa de serviço Vedrà (R$)', r(bK.txServ)],
+    ['(-) PIS + Cofins (R$)', r(bK.pis + bK.cofins)],
+    ['1º resultado (R$)', r(bK.res1)],
+    ['(-) IRPJ + CSLL (R$)', r(bK.irpj + bK.csll)],
+    ['(-) Performance Vedrà (R$)', r(bK.performance)],
+    ['Residual pós Vedrà (R$)', r(bK.residual)],
+    ['Taxa fixa — receita direta (R$)', r(bK.txFixa)],
+    ['Resultado Investidor / mês (R$)', r(bK.kuaraBruta)],
+    ['Capital em giro necessário (R$)', r(vK * (term/30))],
+    [],
+    ['RESULTADO POR VOLUME'],
+    ['Volume operado no mês (R$)', r(volumeOp)],
+    ['Deságio (R$)', r(bO.desagio)],
+    ['(-) Taxa fixa 1% (R$)', r(bO.txFixa)],
+    ['(-) Taxa de serviço 0,3% (R$)', r(bO.txServ)],
+    ['(-) PIS + Cofins (R$)', r(bO.pis + bO.cofins)],
+    ['1º resultado (R$)', r(bO.res1)],
+    ['(-) IRPJ + CSLL (R$)', r(bO.irpj + bO.csll)],
+    ['Resultado líquido de impostos (R$)', r(bO.resLiquido)],
+    ['Performance 25% (R$)', r(bO.performance)],
+    ['Residual (R$)', r(bO.residual)],
+    ['Resultado Vedrà — serviço + performance (R$)', r(bO.vedraBruta)],
+    ['Resultado Investidor — fixa + residual (R$)', r(bO.kuaraBruta)],
+    ['Capital de giro necessário (R$)', r(volumeOp * (term/30))]
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 44 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Meta & Giro');
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  XLSX.writeFile(wb, `calculadora-vedra-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`);
+}
+document.getElementById('export-xlsx').addEventListener('click', exportXlsx);
+
 compute();
 </script>
 </body>
