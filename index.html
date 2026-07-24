@@ -222,7 +222,7 @@
   <footer>Vedrà Securitizadora · Ferramenta interna de estimativa — resultados não substituem apuração contábil.</footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>
 function fmt(v){return 'R$ ' + Math.round(v).toLocaleString('pt-BR');}
 function fmtPct(v){return Math.round(v*10)/10 + '%';}
@@ -356,8 +356,13 @@ document.getElementById('volume-num').addEventListener('input', ()=>{ document.g
   document.getElementById(id).addEventListener('input', compute);
 });
 
-function exportXlsx(){
-  if(typeof XLSX === 'undefined'){ alert('A ferramenta de exportação ainda está carregando. Tente novamente em alguns segundos.'); return; }
+async function exportXlsx(){
+  if(typeof ExcelJS === 'undefined'){ alert('A ferramenta de exportação ainda está carregando. Tente novamente em alguns segundos.'); return; }
+
+  // Cores da marca Vedrà
+  const NAVY='FF1C2B4A', GOLD='FFC9A962', CREAM='FFF3E9D0', SURFACE='FFFAF8F3', BORDER='FFECE7DA', INK='FF1C2B4A', MUTED='FF5B6A82';
+  const CUR='"R$" #,##0';
+
   const ratePct = parseFloat(document.getElementById('rate').value);
   const term = parseFloat(document.getElementById('term').value);
   const costVedra = parseFloat(document.getElementById('cost-vedra').value);
@@ -370,64 +375,111 @@ function exportXlsx(){
   const bV = breakdown(vV, rEff), bK = breakdown(vK, rEff), bO = breakdown(volumeOp, rEff);
   const r = x => Math.round(x);
 
-  const aoa = [
-    ['Calculadora de Meta & Giro Trimestral — Vedrà'],
-    ['Gerado em', new Date().toLocaleString('pt-BR')],
-    [],
-    ['PARÂMETROS'],
-    ['Taxa ao mês (%)', ratePct],
-    ['Prazo médio (dias)', term],
-    ['Giro por trimestre', Number(giro.toFixed(2))],
-    [],
-    ['META VEDRÀ'],
-    ['Meta mensal Vedrà (R$)', r(costVedra)],
-    ['Volume mensal originado (R$)', r(vV)],
-    ['Deságio (R$)', r(bV.desagio)],
-    ['(-) Taxa fixa investidor (R$)', r(bV.txFixa)],
-    ['(-) PIS + Cofins (R$)', r(bV.pis + bV.cofins)],
-    ['1º resultado (R$)', r(bV.res1)],
-    ['(-) IRPJ + CSLL (R$)', r(bV.irpj + bV.csll)],
-    ['Taxa de serviço — receita Vedrà (R$)', r(bV.txServ)],
-    ['Performance 25% pós-imposto (R$)', r(bV.performance)],
-    ['Resultado Vedrà / mês (R$)', r(bV.vedraBruta)],
-    ['Capital em giro necessário (R$)', r(vV * (term/30))],
-    [],
-    ['META INVESTIDOR (KUARÁ)'],
-    ['Meta mensal Investidor (R$)', r(costKuara)],
-    ['Volume mensal originado (R$)', r(vK)],
-    ['Deságio (R$)', r(bK.desagio)],
-    ['(-) Taxa de serviço Vedrà (R$)', r(bK.txServ)],
-    ['(-) PIS + Cofins (R$)', r(bK.pis + bK.cofins)],
-    ['1º resultado (R$)', r(bK.res1)],
-    ['(-) IRPJ + CSLL (R$)', r(bK.irpj + bK.csll)],
-    ['(-) Performance Vedrà (R$)', r(bK.performance)],
-    ['Residual pós Vedrà (R$)', r(bK.residual)],
-    ['Taxa fixa — receita direta (R$)', r(bK.txFixa)],
-    ['Resultado Investidor / mês (R$)', r(bK.kuaraBruta)],
-    ['Capital em giro necessário (R$)', r(vK * (term/30))],
-    [],
-    ['RESULTADO POR VOLUME'],
-    ['Volume operado no mês (R$)', r(volumeOp)],
-    ['Deságio (R$)', r(bO.desagio)],
-    ['(-) Taxa fixa 1% (R$)', r(bO.txFixa)],
-    ['(-) Taxa de serviço 0,3% (R$)', r(bO.txServ)],
-    ['(-) PIS + Cofins (R$)', r(bO.pis + bO.cofins)],
-    ['1º resultado (R$)', r(bO.res1)],
-    ['(-) IRPJ + CSLL (R$)', r(bO.irpj + bO.csll)],
-    ['Resultado líquido de impostos (R$)', r(bO.resLiquido)],
-    ['Performance 25% (R$)', r(bO.performance)],
-    ['Residual (R$)', r(bO.residual)],
-    ['Resultado Vedrà — serviço + performance (R$)', r(bO.vedraBruta)],
-    ['Resultado Investidor — fixa + residual (R$)', r(bO.kuaraBruta)],
-    ['Capital de giro necessário (R$)', r(volumeOp * (term/30))]
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Meta & Giro', { views:[{showGridLines:false}] });
+  ws.columns = [{ width: 46 }, { width: 20 }];
+
+  const fill = argb => ({ type:'pattern', pattern:'solid', fgColor:{argb} });
+  const thin = { style:'thin', color:{argb:BORDER} };
+
+  // Título
+  ws.mergeCells('A1:B1');
+  const t = ws.getCell('A1');
+  t.value = 'Calculadora de Meta & Giro Trimestral — Vedrà';
+  t.fill = fill(NAVY); t.font = { name:'Helvetica', size:13, bold:true, color:{argb:CREAM} };
+  t.alignment = { vertical:'middle', horizontal:'left', indent:1 };
+  ws.getRow(1).height = 26;
+
+  // Subtítulo / data
+  ws.mergeCells('A2:B2');
+  const st = ws.getCell('A2');
+  st.value = 'Gerado em ' + new Date().toLocaleString('pt-BR');
+  st.font = { name:'Helvetica', size:9, italic:true, color:{argb:MUTED} };
+  st.alignment = { horizontal:'left', indent:1 };
+
+  ws.addRow([]); // espaço
+
+  const sections = [
+    { title:'PARÂMETROS', rows:[
+      ['Taxa ao mês', ratePct, '0.0"%"'],
+      ['Prazo médio (dias)', term, '0'],
+      ['Giro por trimestre', Number(giro.toFixed(2)), '0.00"x"'],
+    ]},
+    { title:'META VEDRÀ', rows:[
+      ['Meta mensal Vedrà', r(costVedra), CUR],
+      ['Volume mensal originado', r(vV), CUR],
+      ['Deságio', r(bV.desagio), CUR],
+      ['(-) Taxa fixa (investidor)', r(bV.txFixa), CUR],
+      ['(-) PIS + Cofins', r(bV.pis + bV.cofins), CUR],
+      ['1º resultado', r(bV.res1), CUR],
+      ['(-) IRPJ + CSLL', r(bV.irpj + bV.csll), CUR],
+      ['Taxa de serviço — receita Vedrà', r(bV.txServ), CUR],
+      ['Performance (25% pós-imposto)', r(bV.performance), CUR],
+      ['Resultado Vedrà / mês', r(bV.vedraBruta), CUR, true],
+      ['Capital em giro necessário', r(vV * (term/30)), CUR],
+    ]},
+    { title:'META INVESTIDOR (KUARÁ)', rows:[
+      ['Meta mensal Investidor', r(costKuara), CUR],
+      ['Volume mensal originado', r(vK), CUR],
+      ['Deságio', r(bK.desagio), CUR],
+      ['(-) Taxa de serviço (Vedrà)', r(bK.txServ), CUR],
+      ['(-) PIS + Cofins', r(bK.pis + bK.cofins), CUR],
+      ['1º resultado', r(bK.res1), CUR],
+      ['(-) IRPJ + CSLL', r(bK.irpj + bK.csll), CUR],
+      ['(-) Performance (Vedrà)', r(bK.performance), CUR],
+      ['Residual (pós Vedrà)', r(bK.residual), CUR],
+      ['Taxa fixa — receita direta', r(bK.txFixa), CUR],
+      ['Resultado Investidor / mês', r(bK.kuaraBruta), CUR, true],
+      ['Capital em giro necessário', r(vK * (term/30)), CUR],
+    ]},
+    { title:'RESULTADO POR VOLUME', rows:[
+      ['Volume operado no mês', r(volumeOp), CUR],
+      ['Deságio', r(bO.desagio), CUR],
+      ['(-) Taxa fixa (1%)', r(bO.txFixa), CUR],
+      ['(-) Taxa de serviço (0,3%)', r(bO.txServ), CUR],
+      ['(-) PIS + Cofins', r(bO.pis + bO.cofins), CUR],
+      ['1º resultado', r(bO.res1), CUR],
+      ['(-) IRPJ + CSLL', r(bO.irpj + bO.csll), CUR],
+      ['Resultado líquido de impostos', r(bO.resLiquido), CUR],
+      ['Performance (25%)', r(bO.performance), CUR],
+      ['Residual', r(bO.residual), CUR],
+      ['Resultado Vedrà (serviço + performance)', r(bO.vedraBruta), CUR, true],
+      ['Resultado Investidor (fixa + residual)', r(bO.kuaraBruta), CUR, true],
+      ['Capital de giro necessário', r(volumeOp * (term/30)), CUR],
+    ]},
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{ wch: 44 }, { wch: 20 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Meta & Giro');
+  sections.forEach(sec => {
+    ws.addRow([]);
+    const hr = ws.addRow([sec.title, null]);
+    ws.mergeCells('A' + hr.number + ':B' + hr.number);
+    const hc = ws.getCell('A' + hr.number);
+    hc.fill = fill(NAVY);
+    hc.font = { name:'Helvetica', size:11, bold:true, color:{argb:GOLD} };
+    hc.alignment = { vertical:'middle', indent:1 };
+    hr.height = 20;
+
+    sec.rows.forEach(([label, value, numFmt, isTotal]) => {
+      const row = ws.addRow([label, value]);
+      const cL = row.getCell(1), cR = row.getCell(2);
+      cR.numFmt = numFmt;
+      cR.alignment = { horizontal:'right' };
+      cL.alignment = { indent:1 };
+      cL.font = { name:'Helvetica', size:10, color:{argb: isTotal ? INK : MUTED}, bold: !!isTotal };
+      cR.font = { name:'Helvetica', size:10, color:{argb: INK}, bold: !!isTotal };
+      if(isTotal){ cL.fill = fill(CREAM); cR.fill = fill(CREAM); }
+      cL.border = { bottom: thin }; cR.border = { bottom: thin };
+    });
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
   const d = new Date(), pad = n => String(n).padStart(2, '0');
-  XLSX.writeFile(wb, `calculadora-vedra-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`);
+  const a = document.createElement('a');
+  a.href = url; a.download = `calculadora-vedra-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 document.getElementById('export-xlsx').addEventListener('click', exportXlsx);
 
